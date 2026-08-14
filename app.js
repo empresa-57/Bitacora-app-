@@ -28,6 +28,38 @@ function esc(str) {
 document.getElementById('headerDate').textContent =
   new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+// Comprime una foto de cámara (que puede pesar varios MB) antes de subirla,
+// para que la subida sea rápida y confiable incluso en redes lentas.
+function comprimirImagen(file, maxAncho = 1600, calidad = 0.72) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e) => { img.src = e.target.result; };
+    reader.onerror = reject;
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxAncho) {
+        height = Math.round((height * maxAncho) / width);
+        width = maxAncho;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { reject(new Error('No se pudo comprimir la imagen')); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        calidad
+      );
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ============================================
 // NAVEGACIÓN ENTRE PESTAÑAS
 // ============================================
@@ -208,12 +240,18 @@ document.getElementById('guardarEvidencia').addEventListener('click', async () =
   if (!evidenciaFile) { toast('Toma una foto primero'); return; }
 
   const btn = document.getElementById('guardarEvidencia');
-  btn.textContent = 'Subiendo...';
+  btn.textContent = 'Comprimiendo foto...';
   btn.disabled = true;
 
   try {
-    const path = `evidencias/${Date.now()}_${evidenciaFile.name}`;
-    const { error: upErr } = await sb.storage.from('evidencias').upload(path, evidenciaFile);
+    const fotoComprimida = await comprimirImagen(evidenciaFile);
+
+    btn.textContent = 'Subiendo...';
+    const path = `evidencias/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
+    const { error: upErr } = await sb.storage.from('evidencias').upload(path, fotoComprimida, {
+      contentType: 'image/jpeg',
+      cacheControl: '3600',
+    });
     if (upErr) throw upErr;
 
     const { data: pub } = sb.storage.from('evidencias').getPublicUrl(path);
@@ -234,8 +272,8 @@ document.getElementById('guardarEvidencia').addEventListener('click', async () =
     clearEvidenciaForm();
     cargarEvidencias();
   } catch (err) {
-    console.error(err);
-    toast('Error al guardar evidencia');
+    console.error('Error al guardar evidencia:', err);
+    toast('Error: ' + (err.message || 'no se pudo guardar. Revisa tu conexión.'));
   } finally {
     btn.textContent = 'Guardar evidencia';
     btn.disabled = false;
@@ -362,11 +400,17 @@ document.getElementById('guardarTutorial').addEventListener('click', async () =>
       if (!paso.descripcion.trim()) continue;
       let foto_url = null;
       if (paso.file) {
-        const path = `tutoriales/${tut.id}/${Date.now()}_${paso.file.name}`;
-        const { error: upErr } = await sb.storage.from('tutoriales').upload(path, paso.file);
+        const fotoComprimida = await comprimirImagen(paso.file);
+        const path = `tutoriales/${tut.id}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
+        const { error: upErr } = await sb.storage.from('tutoriales').upload(path, fotoComprimida, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+        });
         if (!upErr) {
           const { data: pub } = sb.storage.from('tutoriales').getPublicUrl(path);
           foto_url = pub.publicUrl;
+        } else {
+          console.error('Error subiendo foto del paso:', upErr);
         }
       }
       await sb.from('pasos_tutorial').insert({
