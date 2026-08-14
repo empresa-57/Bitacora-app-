@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bitácora</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1B2430" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1 class="app-header__title">Bitácora <span class="stamp">Diego</span></h1>
+  <div class="app-header__date" id="headerDate"></div>
+</header>
+
+<div id="pendingBannerHost"></div>
+
+<div class="app-body">
+
+  <!-- Desktop rail -->
+  <nav class="tab-rail" id="tabRail">
+    <button class="tab-rail__item active" data-tab="recordatorios">📌 Recordatorios</button>
+    <button class="tab-rail__item" data-tab="evidencias">📷 Evidencias</button>
+    <button class="tab-rail__item" data-tab="tutoriales">📖 Tutoriales</button>
+    <button class="tab-rail__item" data-tab="voz">🎙️ Notas de voz</button>
+  </nav>
+
+  <main class="main-content">
+
+    <!-- ===================== RECORDATORIOS ===================== -->
+    <section id="tab-recordatorios" class="tab-panel">
+      <div class="section-title">
+        <span class="section-title__label">Recordatorios</span>
+      </div>
+      <div id="pendingBannerRecordatorios"></div>
+      <div id="listaRecordatorios"></div>
+    </section>
+
+    <!-- ===================== EVIDENCIAS ===================== -->
+    <section id="tab-evidencias" class="tab-panel" style="display:none;">
+      <div class="section-title">
+        <span class="section-title__label">Evidencias</span>
+      </div>
+      <div id="listaEvidencias"></div>
+    </section>
+
+    <!-- ===================== TUTORIALES ===================== -->
+    <section id="tab-tutoriales" class="tab-panel" style="display:none;">
+      <div class="section-title">
+        <span class="section-title__label">Tutoriales</span>
+      </div>
+      <div id="listaTutoriales"></div>
+    </section>
+
+    <!-- ===================== NOTAS DE VOZ ===================== -->
+    <section id="tab-voz" class="tab-panel" style="display:none;">
+      <div class="section-title">
+        <span class="section-title__label">Notas de voz</span>
+      </div>
+
+      <div class="recorder">
+        <button class="record-btn" id="btnGrabar">●</button>
+        <div class="record-status" id="estadoGrabacion">Toca para grabar</div>
+      </div>
+
+      <div id="listaNotasVoz"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Bottom nav (mobile) -->
+<nav class="tab-bar" id="tabBar">
+  <button class="tab-bar__item active" data-tab="recordatorios">
+    <span class="icon">📌</span>Recordatorios
+  </button>
+  <button class="tab-bar__item" data-tab="evidencias">
+    <span class="icon">📷</span>Evidencias
+  </button>
+  <button class="tab-bar__item" data-tab="tutoriales">
+    <span class="icon">📖</span>Tutoriales
+  </button>
+  <button class="tab-bar__item" data-tab="voz">
+    <span class="icon">🎙️</span>Voz
+  </button>
+</nav>
+
+<!-- FAB (contextual add button) -->
+<button class="btn btn--ochre btn--icon fab" id="fabAdd">+</button>
+
+<!-- ===================== SHEET: Nuevo recordatorio ===================== -->
+<div class="sheet-backdrop" id="backdropRecordatorio"></div>
+<div class="sheet" id="sheetRecordatorio">
+  <div class="sheet__handle"></div>
+  <h3 class="sheet__title">// Nuevo recordatorio</h3>
+  <div class="field">
+    <label>Título</label>
+    <input type="text" id="rTitulo" placeholder="Ej: Revisar backup semanal" />
+  </div>
+  <div class="field">
+    <label>Descripción (opcional)</label>
+    <textarea id="rDescripcion" placeholder="Detalles..."></textarea>
+  </div>
+  <div class="field">
+    <label>Fecha y hora</label>
+    <input type="datetime-local" id="rFecha" />
+  </div>
+  <div class="field">
+    <label>Prioridad</label>
+    <div class="segmented" id="rPrioridad">
+      <button data-val="baja">Baja</button>
+      <button data-val="media" class="active">Media</button>
+      <button data-val="alta">Alta</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Categoría</label>
+    <div class="segmented" id="rCategoria">
+      <button data-val="personal" class="active">Personal</button>
+      <button data-val="trienergy">Trienergy</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>
+      <input type="checkbox" id="rRecurrente" style="width:auto;display:inline-block;margin-right:6px;" />
+      Recordatorio recurrente
+    </label>
+  </div>
+  <div class="field" id="rRecurrenciaWrap" style="display:none;">
+    <label>Repetir</label>
+    <div class="segmented" id="rRecurrencia">
+      <button data-val="diario">Diario</button>
+      <button data-val="semanal" class="active">Semanal</button>
+      <button data-val="mensual">Mensual</button>
+    </div>
+  </div>
+  <div class="sheet__actions">
+    <button class="btn btn--ghost" id="cancelarRecordatorio" style="flex:1;">Cancelar</button>
+    <button class="btn btn--ochre" id="guardarRecordatorio" style="flex:2;">Guardar recordatorio</button>
+  </div>
+</div>
+
+<!-- ===================== SHEET: Nueva evidencia ===================== -->
+<div class="sheet-backdrop" id="backdropEvidencia"></div>
+<div class="sheet" id="sheetEvidencia">
+  <div class="sheet__handle"></div>
+  <h3 class="sheet__title">// Nueva evidencia</h3>
+
+  <label class="capture-btn" id="captureLabel">
+    📷 Toca para tomar foto
+    <input type="file" id="eFoto" accept="image/*" capture="environment" style="display:none;" />
+  </label>
+  <img id="ePreview" class="capture-preview" style="display:none;" />
+
+  <div class="field" style="margin-top:14px;">
+    <label>Título / referencia</label>
+    <input type="text" id="eTitulo" placeholder="Ej: Guía de envío recibida" />
+  </div>
+  <div class="field">
+    <label>Nota</label>
+    <textarea id="eNota" placeholder="¿Qué es esto? ¿Por qué lo guardas?"></textarea>
+  </div>
+  <div class="field">
+    <label>Etiqueta</label>
+    <input type="text" id="eEtiqueta" placeholder="Ej: paquetes, red, factura..." />
+  </div>
+  <div class="field">
+    <label>Categoría</label>
+    <div class="segmented" id="eCategoria">
+      <button data-val="personal" class="active">Personal</button>
+      <button data-val="trienergy">Trienergy</button>
+    </div>
+  </div>
+  <div class="sheet__actions">
+    <button class="btn btn--ghost" id="cancelarEvidencia" style="flex:1;">Cancelar</button>
+    <button class="btn btn--ochre" id="guardarEvidencia" style="flex:2;">Guardar evidencia</button>
+  </div>
+</div>
+
+<!-- ===================== SHEET: Nuevo tutorial ===================== -->
+<div class="sheet-backdrop" id="backdropTutorial"></div>
+<div class="sheet" id="sheetTutorial">
+  <div class="sheet__handle"></div>
+  <h3 class="sheet__title">// Nuevo tutorial</h3>
+  <div class="field">
+    <label>Título</label>
+    <input type="text" id="tTitulo" placeholder="Ej: Configurar túnel IPSec Fortinet" />
+  </div>
+  <div class="field">
+    <label>Descripción</label>
+    <textarea id="tDescripcion" placeholder="¿Para qué sirve este tutorial?"></textarea>
+  </div>
+  <div class="field">
+    <label>Categoría</label>
+    <div class="segmented" id="tCategoria">
+      <button data-val="personal">Personal</button>
+      <button data-val="trienergy" class="active">Trienergy</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Pasos</label>
+    <div id="pasosContainer"></div>
+    <button class="btn btn--ghost btn--full" id="btnAgregarPaso" type="button" style="margin-top:6px;">+ Agregar paso</button>
+  </div>
+
+  <div class="sheet__actions">
+    <button class="btn btn--ghost" id="cancelarTutorial" style="flex:1;">Cancelar</button>
+    <button class="btn btn--ochre" id="guardarTutorial" style="flex:2;">Guardar tutorial</button>
+  </div>
+</div>
+
+<!-- ===================== SHEET: Ver tutorial ===================== -->
+<div class="sheet-backdrop" id="backdropVerTutorial"></div>
+<div class="sheet" id="sheetVerTutorial">
+  <div class="sheet__handle"></div>
+  <h3 class="sheet__title" id="verTutorialTitulo">// Tutorial</h3>
+  <p id="verTutorialDesc" style="color:var(--text-soft);font-size:13px;"></p>
+  <div id="verTutorialPasos"></div>
+  <div class="sheet__actions">
+    <button class="btn btn--ghost" id="cerrarVerTutorial" style="flex:1;">Cerrar</button>
+    <button class="btn btn--ochre" id="exportarTutorialPDF" style="flex:2;">Descargar como PDF</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
