@@ -96,9 +96,9 @@ function loadTab(tab) {
 // FAB — abre el formulario según la pestaña activa
 // ============================================
 document.getElementById('fabAdd').addEventListener('click', () => {
-  if (activeTab === 'recordatorios') openSheet('Recordatorio');
-  if (activeTab === 'evidencias') openSheet('Evidencia');
-  if (activeTab === 'tutoriales') openTutorialSheet();
+  if (activeTab === 'recordatorios') abrirNuevoRecordatorio();
+  if (activeTab === 'evidencias') abrirNuevaEvidencia();
+  if (activeTab === 'tutoriales') abrirNuevoTutorial();
   if (activeTab === 'voz') toast('Usa el botón de grabar 🎙️');
 });
 
@@ -131,11 +131,52 @@ function segVal(id) {
 // ============================================
 // RECORDATORIOS
 // ============================================
-document.getElementById('cancelarRecordatorio').addEventListener('click', () => closeSheet('Recordatorio'));
+document.getElementById('cancelarRecordatorio').addEventListener('click', () => { editandoRecordatorioId = null; closeSheet('Recordatorio'); });
 
 document.getElementById('rRecurrente').addEventListener('change', (e) => {
   document.getElementById('rRecurrenciaWrap').style.display = e.target.checked ? '' : 'none';
 });
+
+let editandoRecordatorioId = null;
+
+function setSegVal(groupId, val) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  [...group.children].forEach((b) => b.classList.toggle('active', b.dataset.val === val));
+}
+
+function abrirNuevoRecordatorio() {
+  editandoRecordatorioId = null;
+  clearRecordatorioForm();
+  document.querySelector('#sheetRecordatorio .sheet__title').textContent = '// Nuevo recordatorio';
+  document.getElementById('guardarRecordatorio').textContent = 'Guardar recordatorio';
+  openSheet('Recordatorio');
+}
+
+async function editarRecordatorio(id) {
+  const { data: r, error } = await sb.from('recordatorios').select('*').eq('id', id).single();
+  if (error || !r) { toast('No se pudo cargar el recordatorio'); return; }
+
+  editandoRecordatorioId = id;
+  document.getElementById('rTitulo').value = r.titulo || '';
+  document.getElementById('rDescripcion').value = r.descripcion || '';
+  document.getElementById('rFecha').value = toLocalDatetimeInput(r.fecha_hora);
+  setSegVal('rPrioridad', r.prioridad);
+  setSegVal('rCategoria', r.categoria);
+  document.getElementById('rRecurrente').checked = !!r.recurrente;
+  document.getElementById('rRecurrenciaWrap').style.display = r.recurrente ? '' : 'none';
+  if (r.tipo_recurrencia) setSegVal('rRecurrencia', r.tipo_recurrencia);
+
+  document.querySelector('#sheetRecordatorio .sheet__title').textContent = '// Editar recordatorio';
+  document.getElementById('guardarRecordatorio').textContent = 'Guardar cambios';
+  openSheet('Recordatorio');
+}
+
+function toLocalDatetimeInput(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 document.getElementById('guardarRecordatorio').addEventListener('click', async () => {
   const titulo = document.getElementById('rTitulo').value.trim();
@@ -153,10 +194,13 @@ document.getElementById('guardarRecordatorio').addEventListener('click', async (
     tipo_recurrencia: recurrente ? segVal('rRecurrencia') : null,
   };
 
-  const { error } = await sb.from('recordatorios').insert(payload);
+  const { error } = editandoRecordatorioId
+    ? await sb.from('recordatorios').update(payload).eq('id', editandoRecordatorioId)
+    : await sb.from('recordatorios').insert(payload);
   if (error) { console.error(error); toast('Error al guardar'); return; }
 
-  toast('Recordatorio guardado ✓');
+  toast(editandoRecordatorioId ? 'Recordatorio actualizado ✓' : 'Recordatorio guardado ✓');
+  editandoRecordatorioId = null;
   closeSheet('Recordatorio');
   clearRecordatorioForm();
   cargarRecordatorios();
@@ -201,6 +245,7 @@ async function cargarRecordatorios() {
       ${r.descripcion ? `<div class="card__desc">${esc(r.descripcion)}</div>` : ''}
       <div class="card__actions">
         <button onclick="toggleCompletado('${r.id}', ${!r.completado})">${r.completado ? '↺ Reabrir' : '✓ Marcar hecho'}</button>
+        <button onclick="editarRecordatorio('${r.id}')">✏️ Editar</button>
         <button class="danger" onclick="eliminarRecordatorio('${r.id}')">🗑 Eliminar</button>
       </div>
     </div>`;
@@ -223,6 +268,40 @@ async function eliminarRecordatorio(id) {
 // EVIDENCIAS
 // ============================================
 let evidenciaFile = null;
+let editandoEvidenciaId = null;
+let evidenciaFotoUrlExistente = null;
+
+function abrirNuevaEvidencia() {
+  editandoEvidenciaId = null;
+  evidenciaFotoUrlExistente = null;
+  clearEvidenciaForm();
+  document.querySelector('#sheetEvidencia .sheet__title').textContent = '// Nueva evidencia';
+  document.getElementById('guardarEvidencia').textContent = 'Guardar evidencia';
+  openSheet('Evidencia');
+}
+
+async function editarEvidencia(id) {
+  const { data: ev, error } = await sb.from('evidencias').select('*').eq('id', id).single();
+  if (error || !ev) { toast('No se pudo cargar la evidencia'); return; }
+
+  editandoEvidenciaId = id;
+  evidenciaFotoUrlExistente = ev.foto_url;
+  evidenciaFile = null;
+
+  document.getElementById('eTitulo').value = ev.titulo || '';
+  document.getElementById('eNota').value = ev.nota || '';
+  document.getElementById('eEtiqueta').value = ev.etiqueta || '';
+  setSegVal('eCategoria', ev.categoria);
+
+  const preview = document.getElementById('ePreview');
+  preview.src = ev.foto_url;
+  preview.style.display = 'block';
+  document.getElementById('captureLabel').textContent = '📷 Cambiar foto';
+
+  document.querySelector('#sheetEvidencia .sheet__title').textContent = '// Editar evidencia';
+  document.getElementById('guardarEvidencia').textContent = 'Guardar cambios';
+  openSheet('Evidencia');
+}
 
 document.getElementById('eFoto').addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -234,40 +313,47 @@ document.getElementById('eFoto').addEventListener('change', (e) => {
   document.getElementById('captureLabel').textContent = '📷 Cambiar foto';
 });
 
-document.getElementById('cancelarEvidencia').addEventListener('click', () => closeSheet('Evidencia'));
+document.getElementById('cancelarEvidencia').addEventListener('click', () => { editandoEvidenciaId = null; evidenciaFotoUrlExistente = null; closeSheet('Evidencia'); });
 
 document.getElementById('guardarEvidencia').addEventListener('click', async () => {
-  if (!evidenciaFile) { toast('Toma una foto primero'); return; }
+  if (!evidenciaFile && !evidenciaFotoUrlExistente) { toast('Toma una foto primero'); return; }
 
   const btn = document.getElementById('guardarEvidencia');
-  btn.textContent = 'Comprimiendo foto...';
   btn.disabled = true;
 
   try {
-    const fotoComprimida = await comprimirImagen(evidenciaFile);
+    let foto_url = evidenciaFotoUrlExistente;
 
-    btn.textContent = 'Subiendo...';
-    const path = `evidencias/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
-    const { error: upErr } = await sb.storage.from('evidencias').upload(path, fotoComprimida, {
-      contentType: 'image/jpeg',
-      cacheControl: '3600',
-    });
-    if (upErr) throw upErr;
-
-    const { data: pub } = sb.storage.from('evidencias').getPublicUrl(path);
+    if (evidenciaFile) {
+      btn.textContent = 'Comprimiendo foto...';
+      const fotoComprimida = await comprimirImagen(evidenciaFile);
+      btn.textContent = 'Subiendo...';
+      const path = `evidencias/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
+      const { error: upErr } = await sb.storage.from('evidencias').upload(path, fotoComprimida, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = sb.storage.from('evidencias').getPublicUrl(path);
+      foto_url = pub.publicUrl;
+    }
 
     const payload = {
       titulo: document.getElementById('eTitulo').value.trim() || null,
       nota: document.getElementById('eNota').value.trim() || null,
       etiqueta: document.getElementById('eEtiqueta').value.trim() || null,
       categoria: segVal('eCategoria'),
-      foto_url: pub.publicUrl,
+      foto_url,
     };
 
-    const { error } = await sb.from('evidencias').insert(payload);
+    const { error } = editandoEvidenciaId
+      ? await sb.from('evidencias').update(payload).eq('id', editandoEvidenciaId)
+      : await sb.from('evidencias').insert(payload);
     if (error) throw error;
 
-    toast('Evidencia guardada ✓');
+    toast(editandoEvidenciaId ? 'Evidencia actualizada ✓' : 'Evidencia guardada ✓');
+    editandoEvidenciaId = null;
+    evidenciaFotoUrlExistente = null;
     closeSheet('Evidencia');
     clearEvidenciaForm();
     cargarEvidencias();
@@ -275,7 +361,7 @@ document.getElementById('guardarEvidencia').addEventListener('click', async () =
     console.error('Error al guardar evidencia:', err);
     toast('Error: ' + (err.message || 'no se pudo guardar. Revisa tu conexión.'));
   } finally {
-    btn.textContent = 'Guardar evidencia';
+    btn.textContent = editandoEvidenciaId ? 'Guardar cambios' : 'Guardar evidencia';
     btn.disabled = false;
   }
 });
@@ -314,6 +400,7 @@ async function cargarEvidencias() {
       ${e.nota ? `<div class="card__desc">${esc(e.nota)}</div>` : ''}
       <img class="card__photo" src="${e.foto_url}" loading="lazy" />
       <div class="card__actions">
+        <button onclick="editarEvidencia('${e.id}')">✏️ Editar</button>
         <button class="danger" onclick="eliminarEvidencia('${e.id}')">🗑 Eliminar</button>
       </div>
     </div>
@@ -331,6 +418,33 @@ async function eliminarEvidencia(id) {
 // TUTORIALES
 // ============================================
 let pasosTemp = [];
+let editandoTutorialId = null;
+
+function abrirNuevoTutorial() {
+  editandoTutorialId = null;
+  openTutorialSheet();
+  document.querySelector('#sheetTutorial .sheet__title').textContent = '// Nuevo tutorial';
+  document.getElementById('guardarTutorial').textContent = 'Guardar tutorial';
+}
+
+async function editarTutorial(id) {
+  const { data: tut, error: e1 } = await sb.from('tutoriales').select('*').eq('id', id).single();
+  const { data: pasos, error: e2 } = await sb.from('pasos_tutorial').select('*').eq('tutorial_id', id).order('numero_paso');
+  if (e1 || e2 || !tut) { toast('No se pudo cargar el tutorial'); return; }
+
+  editandoTutorialId = id;
+  document.getElementById('tTitulo').value = tut.titulo || '';
+  document.getElementById('tDescripcion').value = tut.descripcion || '';
+  setSegVal('tCategoria', tut.categoria);
+
+  pasosTemp = (pasos || []).map((p) => ({ descripcion: p.descripcion, file: null, foto_url: p.foto_url }));
+  if (pasosTemp.length === 0) pasosTemp.push({ descripcion: '', file: null, foto_url: null });
+  renderPasosForm();
+
+  document.querySelector('#sheetTutorial .sheet__title').textContent = '// Editar tutorial';
+  document.getElementById('guardarTutorial').textContent = 'Guardar cambios';
+  openSheet('Tutorial');
+}
 
 function openTutorialSheet() {
   pasosTemp = [];
@@ -341,7 +455,7 @@ function openTutorialSheet() {
   openSheet('Tutorial');
 }
 
-document.getElementById('cancelarTutorial').addEventListener('click', () => closeSheet('Tutorial'));
+document.getElementById('cancelarTutorial').addEventListener('click', () => { editandoTutorialId = null; closeSheet('Tutorial'); });
 document.getElementById('btnAgregarPaso').addEventListener('click', agregarPasoForm);
 
 function agregarPasoForm() {
@@ -356,10 +470,12 @@ function renderPasosForm() {
       <div class="step-number">${i + 1}.</div>
       <div class="step-body">
         <textarea placeholder="Describe este paso..." data-idx="${i}" class="paso-desc" style="width:100%;border:1.5px solid var(--kraft-border);border-radius:3px;padding:8px;font-size:13px;min-height:44px;">${esc(p.descripcion)}</textarea>
+        ${p.foto_url && !p.file ? `<img src="${p.foto_url}" class="step-photo" style="max-width:120px;" />` : ''}
         <label class="capture-btn" style="padding:10px;font-size:11px;margin-top:6px;">
-          ${p.file ? '📷 Foto añadida ✓' : '📷 Añadir foto (opcional)'}
+          ${p.file ? '📷 Foto nueva añadida ✓' : (p.foto_url ? '📷 Cambiar foto' : '📷 Añadir foto (opcional)')}
           <input type="file" accept="image/*" capture="environment" style="display:none;" class="paso-foto" data-idx="${i}" />
         </label>
+        ${pasosTemp.length > 1 ? `<button type="button" class="btn btn--ghost" data-idx="${i}" style="margin-top:6px;padding:6px 10px;font-size:11px;" onclick="eliminarPasoForm(${i})">✕ Quitar este paso</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -376,6 +492,11 @@ function renderPasosForm() {
   });
 }
 
+function eliminarPasoForm(idx) {
+  pasosTemp.splice(idx, 1);
+  renderPasosForm();
+}
+
 document.getElementById('guardarTutorial').addEventListener('click', async () => {
   const titulo = document.getElementById('tTitulo').value.trim();
   if (!titulo) { toast('Falta el título'); return; }
@@ -388,20 +509,37 @@ document.getElementById('guardarTutorial').addEventListener('click', async () =>
   btn.disabled = true;
 
   try {
-    const { data: tut, error: tutErr } = await sb.from('tutoriales').insert({
-      titulo,
-      descripcion: document.getElementById('tDescripcion').value.trim() || null,
-      categoria: segVal('tCategoria'),
-    }).select().single();
-    if (tutErr) throw tutErr;
+    let tutorialId = editandoTutorialId;
+
+    if (editandoTutorialId) {
+      const { error: updErr } = await sb.from('tutoriales').update({
+        titulo,
+        descripcion: document.getElementById('tDescripcion').value.trim() || null,
+        categoria: segVal('tCategoria'),
+        updated_at: new Date().toISOString(),
+      }).eq('id', editandoTutorialId);
+      if (updErr) throw updErr;
+
+      // Reemplazamos todos los pasos: más simple y confiable que hacer un diff.
+      const { error: delErr } = await sb.from('pasos_tutorial').delete().eq('tutorial_id', editandoTutorialId);
+      if (delErr) throw delErr;
+    } else {
+      const { data: tut, error: tutErr } = await sb.from('tutoriales').insert({
+        titulo,
+        descripcion: document.getElementById('tDescripcion').value.trim() || null,
+        categoria: segVal('tCategoria'),
+      }).select().single();
+      if (tutErr) throw tutErr;
+      tutorialId = tut.id;
+    }
 
     let numero = 1;
     for (const paso of pasosTemp) {
       if (!paso.descripcion.trim()) continue;
-      let foto_url = null;
+      let foto_url = paso.foto_url || null;
       if (paso.file) {
         const fotoComprimida = await comprimirImagen(paso.file);
-        const path = `tutoriales/${tut.id}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
+        const path = `tutoriales/${tutorialId}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
         const { error: upErr } = await sb.storage.from('tutoriales').upload(path, fotoComprimida, {
           contentType: 'image/jpeg',
           cacheControl: '3600',
@@ -414,14 +552,15 @@ document.getElementById('guardarTutorial').addEventListener('click', async () =>
         }
       }
       await sb.from('pasos_tutorial').insert({
-        tutorial_id: tut.id,
+        tutorial_id: tutorialId,
         numero_paso: numero++,
         descripcion: paso.descripcion.trim(),
         foto_url,
       });
     }
 
-    toast('Tutorial guardado ✓');
+    toast(editandoTutorialId ? 'Tutorial actualizado ✓' : 'Tutorial guardado ✓');
+    editandoTutorialId = null;
     closeSheet('Tutorial');
     cargarTutoriales();
   } catch (err) {
@@ -457,6 +596,7 @@ async function cargarTutoriales() {
       ${t.descripcion ? `<div class="card__desc">${esc(t.descripcion)}</div>` : ''}
       <div class="card__actions">
         <button onclick="verTutorial('${t.id}')">👁 Ver pasos</button>
+        <button onclick="editarTutorial('${t.id}')">✏️ Editar</button>
         <button class="danger" onclick="eliminarTutorial('${t.id}')">🗑 Eliminar</button>
       </div>
     </div>
