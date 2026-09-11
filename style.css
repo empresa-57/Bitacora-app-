@@ -417,6 +417,8 @@ button, input, textarea, select {
   color: var(--text-soft);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
+  margin-bottom: 18px;
+  display: block;
 }
 
 .capture-preview {
