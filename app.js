@@ -207,11 +207,14 @@ document.getElementById('guardarRecordatorio').addEventListener('click', async (
 });
 
 function clearRecordatorioForm() {
-  document.getElementById('rTitulo').value = '';
-  document.getElementById('rDescripcion').value = '';
-  document.getElementById('rFecha').value = '';
-  document.getElementById('rRecurrente').checked = false;
-  document.getElementById('rRecurrenciaWrap').style.display = 'none';
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  set('rTitulo', '');
+  set('rDescripcion', '');
+  set('rFecha', '');
+  const chk = document.getElementById('rRecurrente');
+  if (chk) chk.checked = false;
+  const wrap = document.getElementById('rRecurrenciaWrap');
+  if (wrap) wrap.style.display = 'none';
 }
 
 async function cargarRecordatorios() {
@@ -368,12 +371,15 @@ document.getElementById('guardarEvidencia').addEventListener('click', async () =
 
 function clearEvidenciaForm() {
   evidenciaFile = null;
-  document.getElementById('eTitulo').value = '';
-  document.getElementById('eNota').value = '';
-  document.getElementById('eEtiqueta').value = '';
-  document.getElementById('ePreview').style.display = 'none';
-  document.getElementById('captureLabel').textContent = '📷 Toca para tomar foto';
-  document.getElementById('eFoto').value = '';
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  set('eTitulo', '');
+  set('eNota', '');
+  set('eEtiqueta', '');
+  const preview = document.getElementById('ePreview');
+  if (preview) preview.style.display = 'none';
+  const label = document.getElementById('captureLabel');
+  if (label) label.textContent = '📷 Toca para tomar foto';
+  set('eFoto', '');
 }
 
 async function cargarEvidencias() {
@@ -828,3 +834,4 @@ async function chequearPendientes() {
 // ============================================
 cargarRecordatorios();
 chequearPendientes();
+
