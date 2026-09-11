@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bitacora-v1';
+const CACHE_NAME = 'bitacora-v2';
 const ASSETS = [
   './index.html',
   './style.css',
@@ -24,17 +24,17 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Estrategia: network-first para todo lo que sea Supabase (datos siempre frescos),
-// cache-first para los archivos propios de la app (shell).
+// Estrategia: network-first para TODO (datos de Supabase y archivos propios).
+// Así el celular siempre pide la version mas reciente del codigo primero,
+// y solo usa la copia guardada si no hay conexion a internet.
 self.addEventListener('fetch', (event) => {
-  const url = event.request.url;
-
-  if (url.includes('supabase.co')) {
-    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
-    return;
-  }
-
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
