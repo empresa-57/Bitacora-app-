@@ -479,7 +479,7 @@ function renderPasosForm() {
         ${p.foto_url && !p.file ? `<img src="${p.foto_url}" class="step-photo" style="max-width:120px;" />` : ''}
         <label class="capture-btn" style="padding:10px;font-size:11px;margin-top:6px;">
           ${p.file ? '📷 Foto nueva añadida ✓' : (p.foto_url ? '📷 Cambiar foto' : '📷 Añadir foto (opcional)')}
-          <input type="file" accept="image/*" style="display:none;" class="paso-foto" data-idx="${i}" />
+          <input type="file" accept="image/*" capture="environment" style="display:none;" class="paso-foto" data-idx="${i}" />
         </label>
         ${pasosTemp.length > 1 ? `<button type="button" class="btn btn--ghost" data-idx="${i}" style="margin-top:6px;padding:6px 10px;font-size:11px;" onclick="eliminarPasoForm(${i})">✕ Quitar este paso</button>` : ''}
       </div>
@@ -834,3 +834,4 @@ async function chequearPendientes() {
 // ============================================
 cargarRecordatorios();
 chequearPendientes();
+
