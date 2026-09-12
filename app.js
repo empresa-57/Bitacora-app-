@@ -299,7 +299,7 @@ async function editarEvidencia(id) {
   const preview = document.getElementById('ePreview');
   preview.src = ev.foto_url;
   preview.style.display = 'block';
-  document.getElementById('captureLabel').textContent = '📷 Cambiar foto';
+  document.getElementById('captureLabelText').textContent = '📷 Cambiar foto';
 
   document.querySelector('#sheetEvidencia .sheet__title').textContent = '// Editar evidencia';
   document.getElementById('guardarEvidencia').textContent = 'Guardar cambios';
@@ -313,7 +313,7 @@ document.getElementById('eFoto').addEventListener('change', (e) => {
   const preview = document.getElementById('ePreview');
   preview.src = URL.createObjectURL(file);
   preview.style.display = 'block';
-  document.getElementById('captureLabel').textContent = '📷 Cambiar foto';
+  document.getElementById('captureLabelText').textContent = '📷 Cambiar foto';
 });
 
 document.getElementById('cancelarEvidencia').addEventListener('click', () => { editandoEvidenciaId = null; evidenciaFotoUrlExistente = null; closeSheet('Evidencia'); });
@@ -377,7 +377,7 @@ function clearEvidenciaForm() {
   set('eEtiqueta', '');
   const preview = document.getElementById('ePreview');
   if (preview) preview.style.display = 'none';
-  const label = document.getElementById('captureLabel');
+  const label = document.getElementById('captureLabelText');
   if (label) label.textContent = '📷 Toca para tomar foto';
   set('eFoto', '');
 }
@@ -834,4 +834,3 @@ async function chequearPendientes() {
 // ============================================
 cargarRecordatorios();
 chequearPendientes();
-
